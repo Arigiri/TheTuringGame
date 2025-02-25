@@ -18,7 +18,18 @@ class Card:
             json.dump(self.to_json(), f, indent=2)
     
     def load_card(self):
-        pass
+        card_path = f"data/level{self.level_id}/card/c{self.card_id}.json"
+        with open(card_path, 'r') as f:
+            data = json.load(f)
+            
+        self.level_id = data['level_id']
+        self.card_id = data['card_id']
+        self.all_states = data['state']
+        
+        # Create Action objects from the action array
+        self.action = []
+        for i, action_data in enumerate(data['action']):
+            self.action.append(Action(action_data[0], action_data))
 
     def create_default_actions(self, all_states):
         default_actions = []
