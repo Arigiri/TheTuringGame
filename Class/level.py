@@ -15,12 +15,12 @@ class Level:
         return read_json_file(problem_file)
     
     def load_initial_cards(self):
-        try:
-            for i in range(len(os.listdir('data\level{self.level_id}\card'))):
-                new_cards = Card(self.level_id, i, self.problem['state'])
-                new_cards.load_card()
-                self.cards.append(new_cards)
-        except:
+        total_card = len(os.listdir(f"./data/level{self.level_id}/card"))
+        for i in range(total_card):
+            new_cards = Card(self.level_id, i, self.problem['state'])
+            new_cards.load_card()
+            self.cards.append(new_cards)
+        if total_card == 0:
             for i in range(2):
                 new_cards = Card(self.level_id, i, self.problem['state'])
                 new_cards.save_card(f'data\level{self.level_id}\card\c{i}.json')

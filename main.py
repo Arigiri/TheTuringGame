@@ -2,9 +2,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import os
 import json
-from animation import CardEditor
+from animation import CardEditor, TestRunner
 from Class.level import Level as LevelLogic
 from Class.card import Card
+from Class.test import Test
 
 class Level:
     def __init__(self, level_id, problem_data, cards):
@@ -136,6 +137,20 @@ class TuringGame(tk.Tk):
         style.configure(
             "CardHeader.TLabel",
             font=("Arial", 12, "bold")
+        )
+        style.configure(
+            "Title.TLabel",
+            font=("Arial", 16, "bold")
+        )
+        style.configure(
+            "Passed.TButton",
+            background="green",
+            foreground="white"
+        )
+        style.configure(
+            "Failed.TButton",
+            background="red",
+            foreground="white"
         )
 
     def get_level_cards(self, level_path):
@@ -408,8 +423,56 @@ class TuringGame(tk.Tk):
         return card_frame
 
     def setup_tests_tab(self, tab):
-        # Will be implemented later
-        pass
+        """Setup the tests tab with test cases"""
+        # Create main frame for tests tab
+        main_frame = ttk.Frame(tab)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Add title
+        title_label = ttk.Label(main_frame, text="Test Cases", style="Title.TLabel")
+        title_label.pack(pady=(0, 20))
+        
+        # Create test instance
+        self.test_instance = Test(self.current_level.level_id)
+        print(f"Created test instance for level {self.current_level.level_id}")
+        
+        # Create scrollable frame for test buttons
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Add test buttons
+        for test in self.test_instance.tests:
+            test_id = test['id']
+            test_frame = ttk.Frame(scrollable_frame)
+            test_frame.pack(fill=tk.X, pady=5)
+            
+            # Create button with color based on test status
+            button_style = "Passed.TButton" if self.test_instance.is_test_passed(test_id) else "Failed.TButton"
+            test_button = ttk.Button(
+                test_frame,
+                text=f"Test - {test_id}",
+                command=lambda t=test: self.show_test_runner(t),
+                style=button_style
+            )
+            test_button.pack(fill=tk.X)
+            print(f"Added button for Test {test_id}")
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+    def show_test_runner(self, test_data):
+        """Show the test runner screen"""
+        TestRunner(self, test_data, self.current_level)
 
     def show_card_editor(self, card=None, create_card=False):
         if create_card:

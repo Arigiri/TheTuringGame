@@ -150,7 +150,7 @@ class CardEditor(tk.Toplevel):
         next_state_combo = ttk.Combobox(
             frame,
             textvariable=next_state_var,
-            values= list(range(1, len(self.level.cards) + 1)),
+            values= list(range(1, len(self.level.cards) + 1)) + [-1],
             width=15
         )
         next_state_combo.grid(row=0, column=3, padx=2)
@@ -187,6 +187,7 @@ class CardEditor(tk.Toplevel):
 
             # Create Card instance
             card = self.card
+            print([action.action[2] for action in actions])
             card.action = actions
 
             # Check if level name exists
@@ -212,3 +213,274 @@ class CardEditor(tk.Toplevel):
 
         except Exception as e:
             messagebox.showerror("Error", str(e))
+
+class TestRunner(tk.Toplevel):
+    def __init__(self, parent, test_data, level):
+        super().__init__(parent)
+        self.title(f"Test Runner - Test {test_data['id']}")
+        self.geometry("800x600")  # Made taller to accommodate card display
+        
+        self.test_data = test_data
+        self.level = level
+        self.input_tape = list('_' * 50 + test_data['input'] + '_' * 50)
+        self.current_pos = 50  # Start at first input character
+        self.current_card = self.level.cards[0]  # Start with first card
+        self.current_action_index = None  # Track current action index
+        self.next_action = None  # Store next action to be executed
+        self.speed_options = [1, 5, 10, 20, 200, 1000]
+        self.speed_index = 1  # Start at 5x
+        self.is_playing = False
+        self.after_id = None
+        
+        print(f"Starting test with card {self.current_card.card_id}")
+        self.setup_ui()
+        self.find_next_action()  # Find first action on startup
+        
+    def setup_ui(self):
+        # Main frame
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Current card label
+        self.card_label = ttk.Label(main_frame, text=f"Current Card: {self.current_card.card_id}")
+        self.card_label.pack(pady=5)
+        
+        # Tape display frame
+        self.tape_frame = ttk.Frame(main_frame)
+        self.tape_frame.pack(fill=tk.X, pady=20)
+        self.create_tape_display()
+        
+        # Card display frame
+        card_display_frame = ttk.Frame(main_frame)
+        card_display_frame.pack(fill=tk.BOTH, expand=True, pady=20)
+        
+        # Add title for card actions
+        ttk.Label(card_display_frame, text="Card Actions:", font=("Arial", 10, "bold")).pack(anchor="center")
+        
+        # Create scrollable frame for actions
+        self.action_canvas = tk.Canvas(card_display_frame)
+        scrollbar = ttk.Scrollbar(card_display_frame, orient="vertical", command=self.action_canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.action_canvas)
+        
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.action_canvas.configure(scrollregion=self.action_canvas.bbox("all"))
+        )
+        
+        self.action_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="center")
+        self.action_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        self.action_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.update_card_display()
+        
+        # Controls frame
+        controls_frame = ttk.Frame(main_frame)
+        controls_frame.pack(fill=tk.X, pady=20)
+        
+        # Left side - Vertical buttons
+        button_frame = ttk.Frame(controls_frame)
+        button_frame.pack(side=tk.LEFT, padx=20)
+        
+        self.pause_btn = ttk.Button(button_frame, text="Pause", command=self.pause)
+        self.pause_btn.pack(pady=5)
+        
+        self.next_btn = ttk.Button(button_frame, text="Next", command=self.next_step)
+        self.next_btn.pack(pady=5)
+        
+        self.play_btn = ttk.Button(button_frame, text="Play", command=self.play)
+        self.play_btn.pack(pady=5)
+        
+        # Right side - Speed controls
+        speed_frame = ttk.Frame(controls_frame)
+        speed_frame.pack(side=tk.RIGHT, padx=20)
+        
+        left_btn = ttk.Button(speed_frame, text="←", width=3, command=self.decrease_speed)
+        left_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.speed_label = ttk.Label(speed_frame, text=f"{self.speed_options[self.speed_index]}x", width=6)
+        self.speed_label.pack(side=tk.LEFT, padx=5)
+        
+        right_btn = ttk.Button(speed_frame, text="→", width=3, command=self.increase_speed)
+        right_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Back button
+        back_btn = ttk.Button(main_frame, text="Back to Tests", command=self.destroy)
+        back_btn.pack(side=tk.BOTTOM, pady=20)
+        
+    def update_card_display(self):
+        """Update the card actions display"""
+        # Clear existing actions
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+            
+        # Add header
+        header_frame = ttk.Frame(self.scrollable_frame)
+        header_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(header_frame, text="Read", width=10).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="Write", width=10).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="Direction", width=10).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="Next Card", width=10).pack(side=tk.LEFT, padx=5)
+        
+        # Add each action
+        for i, action in enumerate(self.current_card.action):
+            action_frame = ttk.Frame(self.scrollable_frame)
+            action_frame.pack(fill=tk.X, pady=2)
+            
+            # Determine if this is the current action
+            is_current = (i == self.current_action_index)
+            font_style = ("Arial", 10, "bold") if is_current else ("Arial", 10)
+            bg_color = "#e6e6e6" if is_current else "white"
+            
+            # Create labels for each part of the action
+            action_frame.configure(style="Action.TFrame")
+            for value in action.action:
+                label = ttk.Label(
+                    action_frame,
+                    text=str(value),
+                    width=10,
+                    font=font_style,
+                    background=bg_color
+                )
+                label.pack(side=tk.LEFT, padx=5)
+        
+    def create_tape_display(self):
+        # Clear existing tape cells
+        for widget in self.tape_frame.winfo_children():
+            widget.destroy()
+            
+        # Calculate visible range (show 15 cells centered on current position)
+        start_pos = max(0, self.current_pos - 7)
+        end_pos = min(len(self.input_tape), self.current_pos + 8)
+        
+        # Create cell frames
+        for i in range(start_pos, end_pos):
+            cell_frame = ttk.Frame(self.tape_frame, borderwidth=1, relief="solid")
+            cell_frame.pack(side=tk.LEFT, padx=1)
+            
+            # Configure cell style based on position
+            bg_color = "black" if i == self.current_pos else "white"
+            fg_color = "white" if i == self.current_pos else "black"
+            
+            cell_label = ttk.Label(
+                cell_frame,
+                text=self.input_tape[i],
+                width=2,
+                anchor="center",
+                background=bg_color,
+                foreground=fg_color
+            )
+            cell_label.pack(padx=2, pady=2)
+            
+    def increase_speed(self):
+        if self.speed_index < len(self.speed_options) - 1:
+            self.speed_index += 1
+            self.speed_label.config(text=f"{self.speed_options[self.speed_index]}x")
+            
+    def decrease_speed(self):
+        if self.speed_index > 0:
+            self.speed_index -= 1
+            self.speed_label.config(text=f"{self.speed_options[self.speed_index]}x")
+            
+    def play(self):
+        self.is_playing = True
+        self.play_btn.state(['disabled'])
+        self.next_btn.state(['disabled'])
+        self.schedule_next_step()
+        
+    def pause(self):
+        self.is_playing = False
+        if self.after_id:
+            self.after_cancel(self.after_id)
+        self.play_btn.state(['!disabled'])
+        self.next_btn.state(['!disabled'])
+        
+    def find_next_action(self):
+        """Find the next action to be executed based on current position"""
+        current_char = str(self.input_tape[self.current_pos])
+        print(f"Finding next action for position {self.current_pos}, char: {current_char}, card: {self.current_card.card_id}")
+        
+        # Find matching action for current character
+        self.next_action = None
+        for i, action in enumerate(self.current_card.action):
+            if str(action.action[0]) == str(current_char):
+                self.next_action = (i, action)
+                self.current_action_index = i
+                self.update_card_display()
+                print(f"Found next action: {action.action}")
+                return True
+                
+        print(f"No matching action found for char {current_char}")
+        self.current_action_index = None
+        self.update_card_display()
+        return False
+        
+    def execute_next_action(self):
+        """Execute the previously found action"""
+        if not self.next_action:
+            return self.check_output()
+            
+        i, action = self.next_action
+        print(f"Executing action: {action.action}")
+        
+        # Update tape with write value
+        self.input_tape[self.current_pos] = str(action.action[1])
+        
+        # Get direction (-1: left, 0: stay, 1: right)
+        direction = int(action.action[2])
+        
+        # Get next card ID
+        next_card_id = int(action.action[3])
+        print('next_card_id', next_card_id)
+        
+        # Update current card
+        if next_card_id == -1:  # Special case for halt
+            print("Reached halt state")
+            self.pause()
+            return self.check_output()
+        
+        self.current_card = self.level.cards[next_card_id - 1]
+        self.current_action_index = None
+        
+        print(f"Moving direction: {direction}, Next card: {self.current_card.card_id}")
+        self.card_label.config(text=f"Current Card: {self.current_card.card_id}")
+        self.update_card_display()
+        
+        # Update position
+        self.current_pos += direction
+        self.create_tape_display()
+        
+        # Find next action
+        return self.find_next_action()
+        
+    def check_output(self):
+        """Check if current tape matches expected output"""
+        # Get current tape content (excluding leading/trailing _)
+        current_output = ''.join(self.input_tape).strip('_')
+        expected_output = self.test_data['output']
+        
+        print(f"Checking output: Current={current_output}, Expected={expected_output}")
+        
+        if current_output == expected_output:
+            messagebox.showinfo("Test Result", "Test Passed! ")
+            return True
+        else:
+            messagebox.showerror("Test Result", f"Test Failed!\nExpected: {expected_output}\nGot: {current_output}")
+            return False
+        
+    def next_step(self):
+        """Execute next step of the Turing machine"""
+        if self.current_pos < len(self.input_tape) - 1:
+            return self.execute_next_action()
+        return False
+            
+    def schedule_next_step(self):
+        """Schedule the next step based on current speed"""
+        if self.is_playing:
+            if self.next_step():
+                delay = int(1000 / self.speed_options[self.speed_index])
+                self.after_id = self.after(delay, self.schedule_next_step)
+            else:
+                self.pause()
+                print("Machine stopped")
