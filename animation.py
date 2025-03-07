@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import json
 import os
 from Class.card import Card, Action
+from constant import *  # Import all constants
 
 class CardEditor(tk.Toplevel):
     def __init__(self, parent, card=None, level=None, states=None, available_ids=None, next_id=None):
@@ -218,17 +219,17 @@ class TestRunner(tk.Toplevel):
     def __init__(self, parent, test_data, level):
         super().__init__(parent)
         self.title(f"Test Runner - Test {test_data['id']}")
-        self.geometry("800x600")  # Made taller to accommodate card display
+        self.geometry(f"{TEST_RUNNER_WIDTH}x{TEST_RUNNER_HEIGHT}")
         
         self.test_data = test_data
         self.level = level
-        self.input_tape = list('_' * 50 + test_data['input'] + '_' * 50)
-        self.current_pos = 50  # Start at first input character
+        self.input_tape = list(TAPE_PADDING_BEFORE * '_' + test_data['input'] + TAPE_PADDING_AFTER * '_')
+        self.current_pos = TAPE_PADDING_BEFORE  # Start at first input character
         self.current_card = self.level.cards[0]  # Start with first card
         self.current_action_index = None  # Track current action index
         self.next_action = None  # Store next action to be executed
-        self.speed_options = [1, 5, 10, 20, 200, 1000]
-        self.speed_index = 1  # Start at 5x
+        self.speed_options = SPEED_OPTIONS
+        self.speed_index = DEFAULT_SPEED_INDEX
         self.is_playing = False
         self.after_id = None
         
@@ -440,6 +441,8 @@ class TestRunner(tk.Toplevel):
             self.pause()
             return self.check_output()
         
+        # Fix: Make sure we're using 0-based indexing to access cards array
+        # Card IDs are 1-based in the UI, but array indices are 0-based
         self.current_card = self.level.cards[next_card_id - 1]
         self.current_action_index = None
         
@@ -463,17 +466,71 @@ class TestRunner(tk.Toplevel):
         print(f"Checking output: Current={current_output}, Expected={expected_output}")
         
         if current_output == expected_output:
-            messagebox.showinfo("Test Result", "Test Passed! ")
+            # Create a success message with green text
+            result_window = tk.Toplevel(self)
+            result_window.title("Test Result")
+            result_window.geometry("400x200")
+            
+            frame = ttk.Frame(result_window, padding="20")
+            frame.pack(fill=tk.BOTH, expand=True)
+            
+            # Create a custom style for green text
+            style = ttk.Style()
+            style.configure("Success.TLabel", foreground="green", font=("Arial", 12, "bold"))
+            
+            # Show success message with green color
+            success_label = ttk.Label(
+                frame, 
+                text=f"✓ Test Passed! Test #{self.test_data['id']} completed successfully.",
+                style="Success.TLabel"
+            )
+            success_label.pack(pady=20)
+            
+            # Update test status in the parent window if method exists
+            if hasattr(self.master, 'mark_test_completed'):
+                self.master.mark_test_completed(self.test_data['id'])
+                
+            # Add a close button
+            ttk.Button(frame, text="Close", command=result_window.destroy).pack(pady=10)
+            
             return True
         else:
-            messagebox.showerror("Test Result", f"Test Failed!\nExpected: {expected_output}\nGot: {current_output}")
+            # Create a failure message with red text
+            result_window = tk.Toplevel(self)
+            result_window.title("Test Result")
+            result_window.geometry("400x250")
+            
+            frame = ttk.Frame(result_window, padding="20")
+            frame.pack(fill=tk.BOTH, expand=True)
+            
+            # Create a custom style for red text
+            style = ttk.Style()
+            style.configure("Failure.TLabel", foreground="red", font=("Arial", 12, "bold"))
+            style.configure("Details.TLabel", font=("Arial", 10))
+            
+            # Show failure message with red color
+            failure_label = ttk.Label(
+                frame, 
+                text=f"✗ Test Failed! Test #{self.test_data['id']} did not match expected output.",
+                style="Failure.TLabel"
+            )
+            failure_label.pack(pady=(20, 10))
+            
+            # Show expected and actual outputs
+            ttk.Label(frame, text=f"Expected:", style="Details.TLabel").pack(anchor="w")
+            ttk.Label(frame, text=f"{expected_output}", style="Details.TLabel").pack(anchor="w", padx=20)
+            
+            ttk.Label(frame, text=f"Got:", style="Details.TLabel").pack(anchor="w", pady=(10, 0))
+            ttk.Label(frame, text=f"{current_output}", style="Details.TLabel").pack(anchor="w", padx=20)
+            
+            # Add a close button
+            ttk.Button(frame, text="Close", command=result_window.destroy).pack(pady=20)
+            
             return False
         
     def next_step(self):
         """Execute next step of the Turing machine"""
-        if self.current_pos < len(self.input_tape) - 1:
-            return self.execute_next_action()
-        return False
+        return self.execute_next_action()
             
     def schedule_next_step(self):
         """Schedule the next step based on current speed"""
@@ -482,5 +539,8 @@ class TestRunner(tk.Toplevel):
                 delay = int(1000 / self.speed_options[self.speed_index])
                 self.after_id = self.after(delay, self.schedule_next_step)
             else:
+                # First pause the execution
                 self.pause()
                 print("Machine stopped")
+                # ONLY check output here, not in next_step or execute_next_action
+                self.check_output()

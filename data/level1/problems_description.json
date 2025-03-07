@@ -1,5 +1,6 @@
 {
     "state": ["0", "1", "2", "3", "4", "5", "6", "7", "8","9", "_"],
-    "description": "Create a machine that, given in a sequence of numbers, increments by 1 every even digit",
+    "description": 
+    "Well, that's odd\nCreate a machine that, given in a sequence of numbers, increments by 1 every EVEN digit.\n For example, if your input is: \n\n__16334087__\n\n Then your output should be: \n\n__17335197__\n\nGood luck!",
     "level_id": 1
 }

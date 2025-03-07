@@ -48,10 +48,60 @@ class Test:
         return None
 
     def mark_test_passed(self, test_id):
-        """Mark a test as passed"""
-        self.passed_tests.add(str(test_id))
-        print(f"Test {test_id} marked as passed")
+        """Mark a test as passed and save the status"""
+        # Ensure we have the passed_tests attribute initialized
+        if not hasattr(self, 'passed_tests'):
+            self.passed_tests = set()
+            self.load_passed_tests()
         
+        # Convert test_id to int for consistent comparison
+        test_id = int(test_id)
+        
+        # Add the test to passed tests set
+        self.passed_tests.add(test_id)
+        print(f"Marked test {test_id} as passed. All passed tests: {self.passed_tests}")
+        
+        # Save the updated passed tests
+        self.save_passed_tests()
+
+    def load_passed_tests(self):
+        """Load the list of passed tests from file"""
+        if not hasattr(self, 'passed_tests'):
+            self.passed_tests = set()
+        
+        save_path = os.path.join('data', f'level{self.level_id}', 'progress.json')
+        
+        if os.path.exists(save_path):
+            try:
+                with open(save_path, 'r') as f:
+                    data = json.load(f)
+                    passed_tests = data.get('passed_tests', [])
+                    # Convert all test ids to integers
+                    self.passed_tests = set(int(test_id) for test_id in passed_tests)
+                    print(f"Loaded passed tests for level {self.level_id}: {self.passed_tests}")
+            except Exception as e:
+                print(f"Error loading test progress: {e}")
+        else:
+            print(f"No progress file found at {save_path}")
+            self.passed_tests = set()
+
+    def save_passed_tests(self):
+        """Save the list of passed tests to file"""
+        save_dir = os.path.join('data', f'level{self.level_id}')
+        save_path = os.path.join(save_dir, 'progress.json')
+        
+        # Create directory if it doesn't exist
+        os.makedirs(save_dir, exist_ok=True)
+        
+        try:
+            with open(save_path, 'w') as f:
+                json.dump({"passed_tests": list(self.passed_tests)}, f)
+                print(f"Saved progress for level {self.level_id}: {self.passed_tests}")
+        except Exception as e:
+            print(f"Error saving test progress: {e}")
+
     def is_test_passed(self, test_id):
-        """Check if a test has passed"""
-        return str(test_id) in self.passed_tests
+        """Check if a test has been passed"""
+        if not hasattr(self, 'passed_tests'):
+            self.load_passed_tests()
+        return int(test_id) in self.passed_tests
