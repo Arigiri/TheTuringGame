@@ -1,0 +1,5 @@
+{
+    "state": ["x", "(", ")", "_"],
+    "description": "Hide and seek\nDelete all the x's that are not hiding inside of parentheses.\n\nEXAMPLES:\n\n__x(xx)xx__ -> __(xx)__\n_(x)x(x)_ -> _(x)_(x)_",
+    "level_id": 5
+}

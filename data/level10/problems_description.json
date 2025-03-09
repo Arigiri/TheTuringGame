@@ -1,0 +1,5 @@
+{
+    "state": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_"],
+    "description": "The other magic number\nWrite 1 if the input number is divisible by 100, or 0 otherwise.\n\nRemember to delete the original number, leave only the 0 or the 1.\n\nEXAMPLES:\n\n__123__ -> __0__\n__4200__ -> __1__",
+    "level_id": 10
+}

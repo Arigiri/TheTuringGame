@@ -1,0 +1,5 @@
+{
+    "state": ["1", "2", "3", "4", "5", "_"],
+    "description": "Survival of the largest\nScan the input, and output the largest digit you find.\n\nTo make things easier, the input will contain only digits 1 through 5.\n\nEXAMPLES:\n\n__114223__ -> __4__\n__355252__ -> __5__",
+    "level_id": 8
+}

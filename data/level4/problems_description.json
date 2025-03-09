@@ -1,0 +1,5 @@
+{
+    "state": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_"],
+    "description": "NICEn't\nThe President is sick of all the immature jokes on the Internet, and decided to ban the number 69.\nYour task is to create a machine that scans the input, and replaces every occurrence of the forbidden number with its politically correct neighbour, the number 68.\n\nEXAMPLES:\n\n__24699__ -> __24689__\n__69669__ -> __68668__",
+    "level_id": 4
+}

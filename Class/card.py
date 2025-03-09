@@ -34,7 +34,10 @@ class Card:
     def create_default_actions(self, all_states):
         default_actions = []
         for state in all_states:
-            default_actions.append(Action(state, [state, state, 1, self.card_id]))
+            if state == "_":
+                default_actions.append(Action(state, [state, state, 1, -1]))
+            else:
+                default_actions.append(Action(state, [state, state, 1, self.card_id]))
         return default_actions
 
     def to_json(self):

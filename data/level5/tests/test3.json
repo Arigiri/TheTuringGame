@@ -1,0 +1,4 @@
+{
+    "input": "x(x)x(xxx)x",
+    "output": "(x)_(xxx)"
+}

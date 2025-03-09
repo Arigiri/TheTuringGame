@@ -6,7 +6,7 @@ from Class.card import Card, Action
 from constant import *  # Import all constants
 
 class CardEditor(tk.Toplevel):
-    def __init__(self, parent, card=None, level=None, states=None, available_ids=None, next_id=None):
+    def __init__(self, parent, card=None, level=None, states=None, available_ids=None, next_id=None, is_new_card=False):
         super().__init__(parent)
         self.title("Card Editor")
         self.geometry("600x400")
@@ -17,6 +17,7 @@ class CardEditor(tk.Toplevel):
         self.states = states or []
         self.available_ids = available_ids or []
         self.next_id = next_id
+        self.is_new_card = is_new_card  # New flag to track if this is a new card
         
         self.next_card_var = tk.StringVar(value="")
         
@@ -102,7 +103,7 @@ class CardEditor(tk.Toplevel):
         ttk.Button(
             bottom_frame,
             text="Cancel",
-            command=self.destroy
+            command=self.cancel
         ).pack(side=tk.BOTTOM)
 
     def add_action_row(self, action=None):
@@ -205,6 +206,10 @@ class CardEditor(tk.Toplevel):
 
             card.save_card(card_path)
 
+            # If this is a new card, add it to the level now
+            if self.is_new_card:
+                self.level.add_card(self.card)
+
             self.destroy()
             print("self.parent.notebook.select()", self.parent.notebook.select())
             # self.parent.setup_cards_tab((self.parent.notebook.select()))
@@ -214,6 +219,11 @@ class CardEditor(tk.Toplevel):
 
         except Exception as e:
             messagebox.showerror("Error", str(e))
+
+    def cancel(self):
+    
+        # Close the editor without saving
+        self.destroy()
 
 class TestRunner(tk.Toplevel):
     def __init__(self, parent, test_data, level):

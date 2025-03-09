@@ -1,0 +1,5 @@
+{
+    "state": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_"],
+    "description": "Last ONE standing\nDelete every 1 except the last.\n\n(HINT: It's like level 3, but moving backwards)",
+    "level_id": 9
+}

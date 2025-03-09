@@ -1,0 +1,5 @@
+{
+    "state": ["0", "1", "_"],
+    "description": "Let's call it EVEN\nIn this level you will only need the numbers 0 and 1.\n\nCount the 1's in the input and determine if their total number is even or ODD.\nIf it's ODD, append another 1 at the end of the input, so that the total number of 1's becomes even.\nDo not overwrite the 0's.\n\nEXAMPLE:\n\n__0100__ -> 01001\n__0110__ -> __0110__",
+    "level_id": 6
+}

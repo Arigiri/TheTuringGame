@@ -19,6 +19,7 @@ class Level:
         self.transitions = self.extract_transitions()
 
     def add_card(self, card):
+        print('added')
         self.logic.cards.append(card)
     
     def sort_cards(self, cards):
@@ -79,8 +80,7 @@ class Level:
         return sorted(list(available_ids))
     
     def get_next_card_id(self):
-        used_ids = {card.card_id for card in self.cards}
-        return max(used_ids) if used_ids else 1
+        return len(self.cards) + 1
 
 class TuringGame(tk.Tk):
     def __init__(self):
@@ -255,10 +255,11 @@ class TuringGame(tk.Tk):
         
         if os.path.exists(data_dir):
             for item in os.listdir(data_dir):
-                if os.path.isdir(os.path.join(data_dir, item)):
+                if os.path.isdir(os.path.join(data_dir, item)) and item.startswith("level"):
                     levels.append(item)
         
-        return sorted(levels)
+        # Sort numerically by level number instead of alphabetically
+        return sorted(levels, key=lambda x: int(x.replace("level", "")))
 
     def show_home_screen(self):
         # Clear main container
@@ -273,33 +274,41 @@ class TuringGame(tk.Tk):
         )
         title.pack(pady=20)
         
-        # Create buttons container
-        buttons_frame = ttk.Frame(self.main_container)
-        buttons_frame.pack(expand=True)
+        # Calculate how many buttons can fit in a row
+        self.update_idletasks()
+        window_width = self.winfo_width()
+        button_width = 120  # Approximate width of each button in pixels
+        button_padding = 10  # Padding between buttons
+        buttons_per_row = max(1, (window_width - 40) // (button_width + button_padding))
         
-        # Add level buttons
+        # Create a frame for the grid of level buttons
+        grid_frame = ttk.Frame(self.main_container)
+        grid_frame.pack(expand=True, fill=tk.BOTH, padx=20)
+        
+        # Configure grid columns to have equal weight
+        for i in range(buttons_per_row):
+            grid_frame.columnconfigure(i, weight=1)
+        
+        # Add level buttons in a grid layout
         levels = self.get_available_levels()
+        row, col = 0, 0
+        
         for level in levels:
             level_name = level.replace('level', '')
             
             # Check if all tests for this level are passed
             level_completed = self.is_level_completed(level)
-            print(f"Level {level_name} completed status: {level_completed}")
             
-            # Create a frame to hold the button and checkmark
-            level_frame = ttk.Frame(buttons_frame)
-            level_frame.pack(pady=10, fill=tk.X)
+            # Create a frame for this level button and checkmark
+            level_frame = ttk.Frame(grid_frame)
+            level_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
             
             # Add button
             btn_text = f"Level {level_name}"
             
             # Configure button style
-            style = ttk.Style()
             if level_completed:
-                # Add completed level styling
-                style.configure("Completed.TButton", background="#90EE90", foreground="black")
                 button_style = "Completed.TButton"
-                # Add checkmark to button text
                 btn_text = f"✓ {btn_text}"
             else:
                 button_style = "TButton"
@@ -309,19 +318,17 @@ class TuringGame(tk.Tk):
                 level_frame,
                 text=btn_text,
                 command=lambda l=level: self.start_level(l),
-                width=20
+                width=15
             )
             btn.pack(side=tk.LEFT)
             
-            # Add separate checkmark label for completed levels (more visible)
-            if level_completed:
-                checkmark_label = ttk.Label(
-                    level_frame,
-                    text="✓",
-                    font=("Arial", 18, "bold"),
-                    foreground="green"
-                )
-                checkmark_label.pack(side=tk.LEFT, padx=(10, 0))
+            # Add separate checkmark label for completed levels
+            
+            # Move to next column or row as needed
+            col += 1
+            if col >= buttons_per_row:
+                col = 0
+                row += 1
 
     def start_level(self, level_name):
         try:
@@ -520,7 +527,7 @@ class TuringGame(tk.Tk):
         return card_frame
 
     def setup_tests_tab(self, tab):
-        """Setup the tests tab with test cases"""
+        """Setup the tests tab with test cases in a grid layout"""
         # Clear existing content
         for widget in tab.winfo_children():
             widget.destroy()
@@ -544,16 +551,36 @@ class TuringGame(tk.Tk):
         # Make sure passed tests are loaded
         self.test_instance.load_passed_tests()
         
-        # Create a frame for test buttons
-        tests_frame = ttk.Frame(main_frame)
-        tests_frame.pack(fill=tk.BOTH, expand=True)
+        # Calculate how many buttons can fit in a row
+        self.update_idletasks()
+        window_width = self.winfo_width()
+        button_width = 120  # Approximate width of each button in pixels
+        button_padding = 10  # Padding between buttons
+        buttons_per_row = max(1, (window_width - 40) // (button_width + button_padding))
+        
+        # Create scrollable canvas for tests grid
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
+        tests_frame = ttk.Frame(canvas)
+        
+        tests_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=tests_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Add mouse wheel scrolling
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
         
         # Define custom styles for test buttons
         style = ttk.Style()
         style.configure("Passed.TButton", background="#90EE90", foreground="black")
         style.map("Passed.TButton", background=[("active", "#70DA70")])
         
-        # Add test buttons
+        # Add test buttons in a grid layout
+        row, col = 0, 0
         for test in self.test_instance.tests:
             test_id = test['id']
             
@@ -571,27 +598,43 @@ class TuringGame(tk.Tk):
                 tests_frame,
                 text=button_text,
                 command=lambda t=test: self.show_test_runner(t),
-                width=20,
+                width=12,
                 style=button_style
             )
-            test_button.pack(pady=5)
+            test_button.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
             
-            # Style doesn't seem to be working with ttk buttons, let's force it using configure
+            # Force style for passed tests
             if is_passed:
                 test_button.configure(style="Passed.TButton")
+            
+            # Increment column and check if we need to wrap to next row
+            col += 1
+            if col >= buttons_per_row:
+                col = 0
+                row += 1
+        
+        # Configure grid columns to have equal weight
+        for i in range(buttons_per_row):
+            tests_frame.columnconfigure(i, weight=1)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     def show_test_runner(self, test_data):
         """Show the test runner screen"""
         TestRunner(self, test_data, self.current_level)
 
     def show_card_editor(self, card=None, create_card=False):
+        # Create a new card object but don't add it to the level yet
         if create_card:
-            card = Card(
+            new_card = Card(
                 self.current_level.level_id,
                 self.current_level.get_next_card_id(),
                 self.current_level.get_states()
             )
-            self.current_level.add_card(card)
+            card = new_card
+            # Note: We're not adding to self.current_level.add_card(card) here anymore
         
         available_ids = self.current_level.get_available_card_ids()
         next_id = self.current_level.get_next_card_id()
@@ -601,7 +644,8 @@ class TuringGame(tk.Tk):
             level=self.current_level,
             states=self.current_level.get_states(),
             available_ids=available_ids,
-            next_id=next_id
+            next_id=next_id,
+            is_new_card=create_card  # Pass this flag to the editor
         )
         editor.grab_set()
 
@@ -737,11 +781,11 @@ class TuringGame(tk.Tk):
                         # This reference points to a card that needs to be renumbered
                         action.action[3] = str(next_card_id - 1)
                         cards_to_save.add(card)
-                        print(card.card_id)
+                        # print(card.card_id)
         
         # Now update the card IDs sequentially starting from 1
         for i, card in enumerate(cards):
-            new_id = i  # New sequential ID (1-based)
+            new_id = i + 1 # New sequential ID (1-based)
             
             # Only update cards if their ID needs to change
             if card.card_id != new_id:
