@@ -16,11 +16,11 @@ class Level:
     
     def load_initial_cards(self):
         total_card = len(os.listdir(f"data/level{self.level_id}/card"))
-        for i in range(1, total_card + 1):
+        for i in range(1, total_card):
             new_cards = Card(self.level_id, i, self.problem['state'])
             new_cards.load_card()
             self.cards.append(new_cards)
-        if total_card == 0:
+        if total_card == 1:
             for i in range(1, 2):
                 new_cards = Card(self.level_id, i, self.problem['state'])
                 new_cards.save_card(f'data\level{self.level_id}\card\c{i}.json')
