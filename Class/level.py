@@ -15,7 +15,7 @@ class Level:
         return read_json_file(problem_file)
     
     def load_initial_cards(self):
-        total_card = len(os.listdir(f"./data/level{self.level_id}/card"))
+        total_card = len(os.listdir(f"data/level{self.level_id}/card"))
         for i in range(1, total_card + 1):
             new_cards = Card(self.level_id, i, self.problem['state'])
             new_cards.load_card()
