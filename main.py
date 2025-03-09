@@ -812,7 +812,26 @@ class TuringGame(tk.Tk):
             save_path = os.path.join('data', f'level{self.current_level.level_id}', 'card', f'c{card.card_id}.json')
             card.save_card(save_path)
 
+def initialize_directories():
+    """Create necessary directories if they don't exist."""
+    levels = list(range(1, len(os.listdir(f"data")) + 1))
+    
+    for level in levels:
+        # Ensure level directory exists
+        level_dir = os.path.join('data', f'level{level}')
+        os.makedirs(level_dir, exist_ok=True)
+        
+        # Ensure card directory exists
+        card_dir = os.path.join(level_dir, 'card')
+        os.makedirs(card_dir, exist_ok=True)
+        
+        # Ensure tests directory exists
+        tests_dir = os.path.join(level_dir, 'tests')
+        os.makedirs(tests_dir, exist_ok=True)
+
+# Add this to your main() function
 def main():
+    initialize_directories()
     app = TuringGame()
     app.mainloop()
 
