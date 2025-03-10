@@ -26,7 +26,7 @@ The Turing Game is an educational application designed to help users understand 
 
 1. Clone this repository:
    ```
-   git clone https://github.com/your-username/TheTuringGame.git
+   git clone https://github.com/Arigiri/TheTuringGame.git
    ```
 
 2. Install required packages:
